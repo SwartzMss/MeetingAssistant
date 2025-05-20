@@ -20,6 +20,10 @@ jobs:
         arch: 'x64'
         modules: 'qtcharts qtnetworkauth qtmultimedia'
         install-deps: true
+        dir: 'C:/Qt'
+        host: 'windows'
+        target: 'desktop'
+        toolchain: 'msvc2022_64'
     
     - name: Setup MSVC
       uses: ilammy/msvc-dev-cmd@v1
@@ -27,6 +31,7 @@ jobs:
     - name: Configure
       shell: cmd
       run: |
+        set PATH=C:\Qt\6.8.2\msvc2022_64\bin;%PATH%
         qmake
         
     - name: Build
@@ -40,4 +45,5 @@ jobs:
         name: MeetingAssistant
         path: |
           release/*.exe
-          release/*.dll 
+          release/*.dll
+        retention-days: 30 
