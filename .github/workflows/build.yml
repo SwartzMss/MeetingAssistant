@@ -1,0 +1,43 @@
+name: Build Meeting Assistant
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Qt
+      uses: jurplel/install-qt-action@v4
+      with:
+        version: '6.8.2'
+        arch: 'x64'
+        modules: 'qtcharts qtnetworkauth qtmultimedia'
+        install-deps: true
+    
+    - name: Setup MSVC
+      uses: ilammy/msvc-dev-cmd@v1
+    
+    - name: Configure
+      shell: cmd
+      run: |
+        qmake
+        
+    - name: Build
+      shell: cmd
+      run: |
+        nmake
+        
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: MeetingAssistant
+        path: |
+          release/*.exe
+          release/*.dll 
