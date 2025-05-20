@@ -1,26 +1,25 @@
 #include "audioprocessor.h"
 #include <QAudioDevice>
-#include <QAudioSource>
+#include <QMediaDevices>
+#include <QNetworkAccessManager>
+#include <QNetworkRequest>
+#include <QNetworkReply>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
-#include <QNetworkRequest>
-#include <QUrl>
-#include <QMediaDevices>
 #include <QUrlQuery>
-#include <QCryptographicHash>
-#include <QDateTime>
 #include <QEventLoop>
 
 AudioProcessor::AudioProcessor(QObject *parent)
     : QObject(parent)
+    , audioSource(nullptr)
+    , buffer(nullptr)
+    , networkManager(new QNetworkAccessManager(this))
     , isRecording(false)
 {
-    networkManager = new QNetworkAccessManager(this);
+    setupAudioFormat();
     connect(networkManager, &QNetworkAccessManager::finished,
             this, &AudioProcessor::handleTranslationResponse);
-
-    setupAudioFormat();
 }
 
 AudioProcessor::~AudioProcessor()
@@ -28,6 +27,9 @@ AudioProcessor::~AudioProcessor()
     if (isRecording) {
         stopRecording();
     }
+    delete audioSource;
+    delete buffer;
+    delete networkManager;
 }
 
 void AudioProcessor::setAppId(const QString &id)
@@ -47,53 +49,91 @@ void AudioProcessor::setupAudioFormat()
     format.setSampleFormat(QAudioFormat::Int16);
 }
 
-void AudioProcessor::startRecording()
+bool AudioProcessor::startRecording()
 {
-    if (isRecording) return;
-
-    if (appId.isEmpty() || apiKey.isEmpty()) {
-        emit error("请先设置APP ID和API Key");
-        return;
+    if (isRecording) {
+        return true;
     }
 
-    audioBuffer = new QBuffer(this);
-    audioBuffer->open(QIODevice::WriteOnly);
-
     QAudioDevice inputDevice = QMediaDevices::defaultAudioInput();
-    audioInput = new QAudioSource(inputDevice, format, this);
-    
-    connect(audioInput, &QAudioSource::stateChanged, this, [this](QAudio::State state) {
-        if (state == QAudio::StoppedState) {
-            handleAudioData();
-        }
-    });
+    if (!inputDevice.isFormatSupported(format)) {
+        format = inputDevice.preferredFormat();
+    }
 
-    audioInput->start(audioBuffer);
+    buffer = new QBuffer(this);
+    buffer->open(QIODevice::WriteOnly);
+
+    audioSource = new QAudioSource(format, this);
+    audioSource->setBufferSize(4096);
+
+    connect(audioSource, &QAudioSource::stateChanged,
+            this, &AudioProcessor::handleStateChanged);
+
+    audioSource->start(buffer);
     isRecording = true;
-    emit statusChanged("正在录音...");
+    return true;
 }
 
 void AudioProcessor::stopRecording()
 {
-    if (!isRecording) return;
+    if (!isRecording) {
+        return;
+    }
 
-    audioInput->stop();
-    audioBuffer->close();
-    
-    delete audioInput;
-    delete audioBuffer;
-    
+    if (audioSource) {
+        audioSource->stop();
+        buffer->close();
+        
+        // 发送缓冲区中的数据
+        QByteArray audioData = buffer->data();
+        if (!audioData.isEmpty()) {
+            emit audioDataReceived(audioData);
+        }
+    }
+
     isRecording = false;
-    emit statusChanged("就绪");
 }
 
-void AudioProcessor::handleAudioData()
+void AudioProcessor::handleStateChanged(QAudio::State newState)
 {
-    if (!audioBuffer) return;
+    switch (newState) {
+        case QAudio::StoppedState:
+            if (audioSource->error() != QAudio::NoError) {
+                QString errorMsg;
+                switch (audioSource->error()) {
+                    case QAudio::OpenError:
+                        errorMsg = "无法打开音频设备";
+                        break;
+                    case QAudio::IOError:
+                        errorMsg = "音频设备IO错误";
+                        break;
+                    case QAudio::UnderrunError:
+                        errorMsg = "音频数据下溢";
+                        break;
+                    case QAudio::FatalError:
+                        errorMsg = "音频设备致命错误";
+                        break;
+                    default:
+                        errorMsg = "未知错误";
+                        break;
+                }
+                emit error(errorMsg);
+            }
+            break;
+        case QAudio::ActiveState:
+            // 开始录音
+            break;
+        default:
+            break;
+    }
+}
 
-    QByteArray audioData = audioBuffer->buffer();
-    if (!audioData.isEmpty()) {
-        translateAudio(audioData);
+void AudioProcessor::handleDataReceived()
+{
+    if (buffer && buffer->size() > 0) {
+        QByteArray audioData = buffer->data();
+        buffer->buffer().clear();
+        emit audioDataReceived(audioData);
     }
 }
 

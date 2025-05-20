@@ -10,6 +10,7 @@
 #include <QNetworkReply>
 #include <QMediaDevices>
 #include <QString>
+#include <QIODevice>
 
 class AudioProcessor : public QObject
 {
@@ -19,23 +20,25 @@ public:
     explicit AudioProcessor(QObject *parent = nullptr);
     ~AudioProcessor();
 
-    void startRecording();
+    bool startRecording();
     void stopRecording();
     void setAppId(const QString &appId);
     void setApiKey(const QString &apiKey);
 
 signals:
+    void audioDataReceived(const QByteArray &data);
     void newTranslation(const QString &text);
     void statusChanged(const QString &status);
     void error(const QString &message);
 
 private slots:
-    void handleAudioData();
+    void handleStateChanged(QAudio::State newState);
+    void handleDataReceived();
     void handleTranslationResponse(QNetworkReply *reply);
 
 private:
-    QAudioSource *audioInput;
-    QBuffer *audioBuffer;
+    QAudioSource *audioSource;
+    QBuffer *buffer;
     QNetworkAccessManager *networkManager;
     QAudioFormat format;
     bool isRecording;

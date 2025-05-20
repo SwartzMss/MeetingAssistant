@@ -11,11 +11,15 @@ CONFIG += c++17
 SOURCES += \
     src/main.cpp \
     src/mainwindow.cpp \
-    src/audioprocessor.cpp
+    src/audioprocessor.cpp \
+    src/baiduapi.cpp \
+    src/logger.cpp
 
 HEADERS += \
     src/mainwindow.h \
-    src/audioprocessor.h
+    src/audioprocessor.h \
+    src/baiduapi.h \
+    src/logger.h
 
 FORMS += \
     src/mainwindow.ui

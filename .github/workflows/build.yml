@@ -16,14 +16,13 @@ jobs:
     - name: Setup Qt
       uses: jurplel/install-qt-action@v4
       with:
-        version: '6.8.2'
-        arch: 'x64'
-        modules: 'qtcharts qtnetworkauth qtmultimedia'
+        version:      '6.8.2'
+        host:         'windows'
+        target:       'desktop'
+        arch:         'win64_msvc2022_64'
+        modules:      'qtcharts qtnetworkauth qtmultimedia'
         install-deps: true
-        dir: 'C:/Qt'
-        host: 'windows'
-        target: 'desktop'
-        toolchain: 'msvc2022_64'
+        dir:          'C:/Qt'
     
     - name: Setup MSVC
       uses: ilammy/msvc-dev-cmd@v1
