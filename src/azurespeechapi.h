@@ -7,6 +7,11 @@
 #include <memory>
 #include <speechapi_cxx.h>
 #include <speechapi_cxx_translation_recognizer.h>
+#include "logger.h"
+
+using namespace Microsoft::CognitiveServices::Speech;
+using namespace Microsoft::CognitiveServices::Speech::Translation;
+using namespace Microsoft::CognitiveServices::Speech::Audio;
 
 class AzureSpeechAPI : public QObject
 {
@@ -28,6 +33,8 @@ public:
     // 处理音频数据
     void processAudioData(const QByteArray &audioData);
 
+    void testConnection(const QString &key, const QString &region);
+
 signals:
     void recognitionResult(const QString &text);
     void translationResult(const QString &text);
@@ -35,14 +42,15 @@ signals:
     void statusChanged(const QString &status);
 
 private:
-    std::shared_ptr<Microsoft::CognitiveServices::Speech::SpeechConfig> speechConfig;
-    std::shared_ptr<Microsoft::CognitiveServices::Speech::Translation::SpeechTranslationConfig> translationConfig;
-    std::shared_ptr<Microsoft::CognitiveServices::Speech::Translation::TranslationRecognizer> recognizer;
-    std::shared_ptr<Microsoft::CognitiveServices::Speech::Audio::PushAudioInputStream> audioStream;
+    std::shared_ptr<SpeechConfig> speechConfig;
+    std::shared_ptr<SpeechTranslationConfig> translationConfig;
+    std::shared_ptr<TranslationRecognizer> recognizer;
+    std::shared_ptr<PushAudioInputStream> audioStream;
     
     bool isInitialized;
     QString currentSourceLanguage;
     QString currentTargetLanguage;
+    std::unique_ptr<Logger> logger;
 };
 
 #endif // AZURESPEECHAPI_H 

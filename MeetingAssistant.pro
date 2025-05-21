@@ -9,6 +9,10 @@ win32 {
     LIBS += -lole32 -loleaut32 -lmmdevapi
 }
 
+# 添加调试信息
+QMAKE_CXXFLAGS_RELEASE += /Zi
+QMAKE_LFLAGS_RELEASE += /DEBUG /OPT:REF /OPT:ICF
+
 # You can make your code fail to compile if it uses deprecated APIs.
 # In order to do so, uncomment the following line.
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
@@ -63,4 +67,7 @@ win32 {
     $$quote(cmd /c copy /Y \"$$PWD\\third_party\\azure_speech_sdk\\bin\\Microsoft.CognitiveServices.Speech.extension.kws.dll\" \"$$OUT_PWD\\release\\Microsoft.CognitiveServices.Speech.extension.kws.dll\") && \
     $$quote(cmd /c copy /Y \"$$PWD\\third_party\\azure_speech_sdk\\bin\\Microsoft.CognitiveServices.Speech.extension.kws.ort.dll\" \"$$OUT_PWD\\release\\Microsoft.CognitiveServices.Speech.extension.kws.ort.dll\") && \
     $$quote(cmd /c copy /Y \"$$PWD\\third_party\\azure_speech_sdk\\bin\\Microsoft.CognitiveServices.Speech.extension.lu.dll\" \"$$OUT_PWD\\release\\Microsoft.CognitiveServices.Speech.extension.lu.dll\")
-} 
+}
+
+# 添加 Windows 调试帮助库
+LIBS += -ldbghelp 
