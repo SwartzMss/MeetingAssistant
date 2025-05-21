@@ -2,15 +2,8 @@
 #define AUDIOPROCESSOR_H
 
 #include <QObject>
-#include <QAudioSource>
-#include <QAudioDevice>
-#include <QAudioFormat>
-#include <QBuffer>
 #include <QNetworkAccessManager>
-#include <QNetworkReply>
-#include <QMediaDevices>
-#include <QString>
-#include <QIODevice>
+#include "wasapiaudiocapture.h"
 
 class AudioProcessor : public QObject
 {
@@ -20,35 +13,29 @@ public:
     explicit AudioProcessor(QObject *parent = nullptr);
     ~AudioProcessor();
 
+    void setAppId(const QString &id);
+    void setApiKey(const QString &key);
     bool startRecording();
     void stopRecording();
-    void setAppId(const QString &appId);
-    void setApiKey(const QString &apiKey);
 
 signals:
     void audioDataReceived(const QByteArray &data);
     void newTranslation(const QString &text);
-    void statusChanged(const QString &status);
     void error(const QString &message);
 
 private slots:
-    void handleStateChanged(QAudio::State newState);
-    void handleDataReceived();
     void handleTranslationResponse(QNetworkReply *reply);
+    void handleAudioData(const QByteArray &data);
 
 private:
-    QAudioSource *audioSource;
-    QBuffer *buffer;
-    QNetworkAccessManager *networkManager;
-    QAudioFormat format;
-    bool isRecording;
-    QString appId;
-    QString apiKey;
-
-    void setupAudioFormat();
-    void translateAudio(const QByteArray &audioData);
     QString getAccessToken();
     void sendAudioToAPI(const QByteArray &audioData, const QString &accessToken);
+
+    QString appId;
+    QString apiKey;
+    QNetworkAccessManager *networkManager;
+    WasapiAudioCapture *audioCapture;
+    bool isRecording;
 };
 
 #endif // AUDIOPROCESSOR_H 
