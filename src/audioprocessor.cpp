@@ -1,7 +1,4 @@
 #include "audioprocessor.h"
-#include <QAudioDevice>
-#include <QMediaDevices>
-#include <QNetworkAccessManager>
 #include <QNetworkRequest>
 #include <QNetworkReply>
 #include <QJsonDocument>
@@ -12,14 +9,16 @@
 
 AudioProcessor::AudioProcessor(QObject *parent)
     : QObject(parent)
-    , audioSource(nullptr)
-    , buffer(nullptr)
     , networkManager(new QNetworkAccessManager(this))
+    , audioCapture(new WasapiAudioCapture(this))
     , isRecording(false)
 {
-    setupAudioFormat();
     connect(networkManager, &QNetworkAccessManager::finished,
             this, &AudioProcessor::handleTranslationResponse);
+    connect(audioCapture, &WasapiAudioCapture::audioDataReceived,
+            this, &AudioProcessor::handleAudioData);
+    connect(audioCapture, &WasapiAudioCapture::error,
+            this, &AudioProcessor::error);
 }
 
 AudioProcessor::~AudioProcessor()
@@ -27,9 +26,8 @@ AudioProcessor::~AudioProcessor()
     if (isRecording) {
         stopRecording();
     }
-    delete audioSource;
-    delete buffer;
     delete networkManager;
+    delete audioCapture;
 }
 
 void AudioProcessor::setAppId(const QString &id)
@@ -42,34 +40,16 @@ void AudioProcessor::setApiKey(const QString &key)
     apiKey = key;
 }
 
-void AudioProcessor::setupAudioFormat()
-{
-    format.setSampleRate(16000);
-    format.setChannelCount(1);
-    format.setSampleFormat(QAudioFormat::Int16);
-}
-
 bool AudioProcessor::startRecording()
 {
     if (isRecording) {
         return true;
     }
 
-    QAudioDevice inputDevice = QMediaDevices::defaultAudioInput();
-    if (!inputDevice.isFormatSupported(format)) {
-        format = inputDevice.preferredFormat();
+    if (!audioCapture->startCapture()) {
+        return false;
     }
 
-    buffer = new QBuffer(this);
-    buffer->open(QIODevice::WriteOnly);
-
-    audioSource = new QAudioSource(format, this);
-    audioSource->setBufferSize(4096);
-
-    connect(audioSource, &QAudioSource::stateChanged,
-            this, &AudioProcessor::handleStateChanged);
-
-    audioSource->start(buffer);
     isRecording = true;
     return true;
 }
@@ -80,72 +60,19 @@ void AudioProcessor::stopRecording()
         return;
     }
 
-    if (audioSource) {
-        audioSource->stop();
-        buffer->close();
-        
-        // 发送缓冲区中的数据
-        QByteArray audioData = buffer->data();
-        if (!audioData.isEmpty()) {
-            emit audioDataReceived(audioData);
-        }
-    }
-
+    audioCapture->stopCapture();
     isRecording = false;
 }
 
-void AudioProcessor::handleStateChanged(QAudio::State newState)
+void AudioProcessor::handleAudioData(const QByteArray &data)
 {
-    switch (newState) {
-        case QAudio::StoppedState:
-            if (audioSource->error() != QAudio::NoError) {
-                QString errorMsg;
-                switch (audioSource->error()) {
-                    case QAudio::OpenError:
-                        errorMsg = "无法打开音频设备";
-                        break;
-                    case QAudio::IOError:
-                        errorMsg = "音频设备IO错误";
-                        break;
-                    case QAudio::UnderrunError:
-                        errorMsg = "音频数据下溢";
-                        break;
-                    case QAudio::FatalError:
-                        errorMsg = "音频设备致命错误";
-                        break;
-                    default:
-                        errorMsg = "未知错误";
-                        break;
-                }
-                emit error(errorMsg);
-            }
-            break;
-        case QAudio::ActiveState:
-            // 开始录音
-            break;
-        default:
-            break;
+    if (!data.isEmpty()) {
+        emit audioDataReceived(data);
+        QString accessToken = getAccessToken();
+        if (!accessToken.isEmpty()) {
+            sendAudioToAPI(data, accessToken);
+        }
     }
-}
-
-void AudioProcessor::handleDataReceived()
-{
-    if (buffer && buffer->size() > 0) {
-        QByteArray audioData = buffer->data();
-        buffer->buffer().clear();
-        emit audioDataReceived(audioData);
-    }
-}
-
-void AudioProcessor::translateAudio(const QByteArray &audioData)
-{
-    QString accessToken = getAccessToken();
-    if (accessToken.isEmpty()) {
-        emit error("获取访问令牌失败");
-        return;
-    }
-
-    sendAudioToAPI(audioData, accessToken);
 }
 
 QString AudioProcessor::getAccessToken()
@@ -162,7 +89,6 @@ QString AudioProcessor::getAccessToken()
 
     QNetworkReply *reply = networkManager->post(request, QByteArray());
     
-    // 等待响应
     QEventLoop loop;
     connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
     loop.exec();
@@ -190,7 +116,6 @@ void AudioProcessor::sendAudioToAPI(const QByteArray &audioData, const QString &
     request.setHeader(QNetworkRequest::ContentTypeHeader, "audio/pcm;rate=16000");
     
     QNetworkReply *reply = networkManager->post(request, audioData);
-    // 响应会在handleTranslationResponse中处理
 }
 
 void AudioProcessor::handleTranslationResponse(QNetworkReply *reply)
