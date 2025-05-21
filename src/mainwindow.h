@@ -2,24 +2,16 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
-#include <QLineEdit>
-#include <QPushButton>
-#include <QTextEdit>
-#include <QLabel>
-#include <QStatusBar>
-#include <QMessageBox>
-#include <QFile>
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QDir>
-#include <QStandardPaths>
-#include <QByteArray>
+#include <QAudioInput>
+#include <QAudioOutput>
+#include <QBuffer>
+#include <QTimer>
 #include "audioprocessor.h"
-#include "baiduapi.h"
+#include "azurespeechapi.h"
 
-namespace Ui {
-class MainWindow;
-}
+QT_BEGIN_NAMESPACE
+namespace Ui { class MainWindow; }
+QT_END_NAMESPACE
 
 class MainWindow : public QMainWindow
 {
@@ -30,35 +22,22 @@ public:
     ~MainWindow();
 
 private slots:
-    void onStartStopClicked();
-    void onClearClicked();
-    void onSaveConfigClicked();
-    void onTestApiClicked();
+    void onStartButtonClicked();
+    void onStopButtonClicked();
+    void onTestConnectionButtonClicked();
     void onAudioDataReceived(const QByteArray &data);
     void onRecognitionResult(const QString &text);
     void onTranslationResult(const QString &text);
-    void onApiError(const QString &message);
-    void onApiTestResult(bool success, const QString &message);
+    void onError(const QString &message);
+    void onStatusChanged(const QString &status);
 
 private:
-    void setupUI();
-    void loadConfig();
-    void saveConfig();
-    void updateButtonState();
-    void appendSubtitle(const QString &text);
-    QString getConfigPath() const;
-
-    QLineEdit *appIdInput;
-    QLineEdit *apiKeyInput;
-    QPushButton *saveConfigButton;
-    QPushButton *testApiButton;
-    QPushButton *startStopButton;
-    QPushButton *clearButton;
-    QTextEdit *subtitleDisplay;
-    QStatusBar *statusBar;
+    Ui::MainWindow *ui;
     AudioProcessor *audioProcessor;
-    BaiduAPI *baiduApi;
-    bool isRecording;
+    AzureSpeechAPI *azureSpeechApi;
+    QString currentAppId;
+    QString currentApiKey;
+    QString currentRegion;
 };
 
 #endif // MAINWINDOW_H 
