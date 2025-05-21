@@ -8,6 +8,7 @@
 #include <QTimer>
 #include "audioprocessor.h"
 #include "azurespeechapi.h"
+#include "logger.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -24,20 +25,21 @@ public:
 private slots:
     void onStartButtonClicked();
     void onStopButtonClicked();
-    void onTestConnectionButtonClicked();
     void onAudioDataReceived(const QByteArray &data);
     void onRecognitionResult(const QString &text);
     void onTranslationResult(const QString &text);
     void onError(const QString &message);
     void onStatusChanged(const QString &status);
+    void onTestButtonClicked();
+    void onSaveConfigClicked();
+    void loadConfig();
 
 private:
     Ui::MainWindow *ui;
     AudioProcessor *audioProcessor;
-    AzureSpeechAPI *azureSpeechApi;
-    QString currentAppId;
-    QString currentApiKey;
-    QString currentRegion;
+    AzureSpeechAPI *azureSpeechAPI;
+    Logger *logger;
+    QString configFilePath;
 };
 
 #endif // MAINWINDOW_H 
