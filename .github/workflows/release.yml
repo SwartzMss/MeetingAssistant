@@ -1,61 +1,60 @@
-name: Build and Release MeetingAssistant
+name: Release Meeting Assistant
 
 on:
   push:
     tags:
       - 'v*'
-      - 'V*'
 
 jobs:
-  build:
+  release:
     runs-on: windows-latest
-
-    env:
-      QT_VERSION: 6.8.2
-      QT_DIR: C:\Qt\6.8.2\msvc2022_64
-
+    
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Set up MSVC
-        uses: ilammy/msvc-dev-cmd@v1
-
-      - name: Set up Qt
-        uses: jurplel/install-qt-action@v3
-        with:
-          version: ${{ env.QT_VERSION }}
-          arch: win64_msvc2019_64
-
-      - name: Install Ninja (optional, if you use CMake+Ninja)
-        uses: seanmiddleditch/gha-setup-ninja@v3
-
-      - name: Build with qmake & nmake
-        run: |
-          "${{ env.QT_DIR }}\\bin\\qmake.exe" MeetingAssistant.pro -spec win32-msvc
-          nmake
-
-      - name: Run windeployqt
-        run: |
-          "${{ env.QT_DIR }}\\bin\\windeployqt.exe" --release --qmldir . release\\MeetingAssistant.exe
-
-      - name: Copy Azure Speech SDK DLLs
-        run: |
-          copy third_party\\azure_speech_sdk\\bin\\*.dll release\\
-
-      - name: Copy config/logs/dumps (if needed)
-        run: |
-          if not exist release\\logs mkdir release\\logs
-          if not exist release\\dumps mkdir release\\dumps
-          if exist config.ini copy config.ini release\\
-
-      - name: Archive release files
-        run: |
-          7z a MeetingAssistant-win64.zip .\release\*
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: MeetingAssistant-win64.zip
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
+    - uses: actions/checkout@v4
+    
+    - name: Setup Qt
+      uses: jurplel/install-qt-action@v4
+      with:
+        version:      '6.8.2'
+        host:         'windows'
+        target:       'desktop'
+        arch:         'win64_msvc2022_64'
+        modules:      'qtcharts qtnetworkauth qtmultimedia'
+        install-deps: true
+        dir:          'C:/Qt'
+    
+    - name: Setup MSVC
+      uses: ilammy/msvc-dev-cmd@v1
+    
+    - name: Configure
+      shell: cmd
+      run: |
+        set PATH=C:\Qt\6.8.2\msvc2022_64\bin;%PATH%
+        qmake
+        
+    - name: Build
+      shell: cmd
+      run: |
+        nmake
+        
+    - name: Copy DLLs
+      shell: cmd
+      run: |
+        windeployqt --release --qmldir . release\MeetingAssistant.exe
+        
+    - name: Copy Azure Speech SDK DLLs
+      shell: cmd
+      run: |
+        xcopy /Y /E MeetingAssistant\third_party\azure_speech_sdk\bin\*.dll release\
+        
+    - name: Compress Release
+      shell: cmd
+      run: |
+        powershell Compress-Archive -Path release\* -DestinationPath release.zip
+        
+    - name: Upload Release
+      uses: actions/upload-artifact@v4
+      with:
+        name: MeetingAssistant
+        path: release.zip
+        retention-days: 30 
