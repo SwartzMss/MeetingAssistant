@@ -68,54 +68,7 @@ void AudioProcessor::handleAudioData(const QByteArray &data)
 {
     if (!data.isEmpty()) {
         emit audioDataReceived(data);
-        QString accessToken = getAccessToken();
-        if (!accessToken.isEmpty()) {
-            sendAudioToAPI(data, accessToken);
-        }
     }
-}
-
-QString AudioProcessor::getAccessToken()
-{
-    QUrl url("https://aip.baidubce.com/oauth/2.0/token");
-    QUrlQuery query;
-    query.addQueryItem("grant_type", "client_credentials");
-    query.addQueryItem("client_id", appId);
-    query.addQueryItem("client_secret", apiKey);
-    url.setQuery(query);
-
-    QNetworkRequest request(url);
-    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
-
-    QNetworkReply *reply = networkManager->post(request, QByteArray());
-    
-    QEventLoop loop;
-    connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
-    loop.exec();
-
-    if (reply->error() == QNetworkReply::NoError) {
-        QByteArray response = reply->readAll();
-        QJsonDocument doc = QJsonDocument::fromJson(response);
-        QJsonObject obj = doc.object();
-        
-        if (obj.contains("access_token")) {
-            return obj["access_token"].toString();
-        }
-    }
-    
-    reply->deleteLater();
-    return QString();
-}
-
-void AudioProcessor::sendAudioToAPI(const QByteArray &audioData, const QString &accessToken)
-{
-    QUrl url(QString("https://aip.baidubce.com/rpc/2.0/asr/v1/wst?dev_pid=1537&cuid=MeetingAssistant&token=%1")
-             .arg(accessToken));
-
-    QNetworkRequest request(url);
-    request.setHeader(QNetworkRequest::ContentTypeHeader, "audio/pcm;rate=16000");
-    
-    QNetworkReply *reply = networkManager->post(request, audioData);
 }
 
 void AudioProcessor::handleTranslationResponse(QNetworkReply *reply)

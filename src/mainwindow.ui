@@ -124,6 +124,13 @@
        </widget>
       </item>
       <item>
+       <widget class="QPushButton" name="clearButton">
+        <property name="text">
+         <string>清空内容</string>
+        </property>
+       </widget>
+      </item>
+      <item>
        <spacer name="horizontalSpacer">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
@@ -137,6 +144,22 @@
        </spacer>
       </item>
      </layout>
+    </item>
+    <item>
+     <widget class="QGroupBox" name="groupBoxHistory">
+      <property name="title">
+       <string>历史字幕</string>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayoutHistory">
+       <item>
+        <widget class="QTextEdit" name="historyChineseText">
+         <property name="readOnly">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
     </item>
    </layout>
   </widget>

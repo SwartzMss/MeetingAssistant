@@ -28,9 +28,6 @@ private slots:
     void handleAudioData(const QByteArray &data);
 
 private:
-    QString getAccessToken();
-    void sendAudioToAPI(const QByteArray &audioData, const QString &accessToken);
-
     QString appId;
     QString apiKey;
     QNetworkAccessManager *networkManager;

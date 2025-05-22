@@ -38,6 +38,7 @@ public:
 signals:
     void recognitionResult(const QString &text);
     void translationResult(const QString &text);
+    void finalTranslationResult(const QString &text);
     void error(const QString &message);
     void statusChanged(const QString &status);
 

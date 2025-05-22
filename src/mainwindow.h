@@ -6,6 +6,8 @@
 #include <QAudioOutput>
 #include <QBuffer>
 #include <QTimer>
+#include <QLabel>
+#include <QTextEdit>
 #include "audioprocessor.h"
 #include "azurespeechapi.h"
 #include "logger.h"
@@ -33,6 +35,9 @@ private slots:
     void onTestButtonClicked();
     void onSaveConfigClicked();
     void loadConfig();
+    void onFinalRecognitionResult(const QString &text);
+    void onFinalTranslationResult(const QString &text);
+    void onClearButtonClicked();
 
 private:
     Ui::MainWindow *ui;
@@ -40,6 +45,9 @@ private:
     AzureSpeechAPI *azureSpeechAPI;
     Logger *logger;
     QString configFilePath;
+    QString recognitionHistory;
+    QString translationHistory;
+    QTextEdit *historyChineseText;
 };
 
 #endif // MAINWINDOW_H 

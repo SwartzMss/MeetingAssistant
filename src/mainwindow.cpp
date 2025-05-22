@@ -5,6 +5,8 @@
 #include <QDir>
 #include <QSettings>
 #include <QCoreApplication>
+#include <QScrollBar>
+#include <QTimer>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -21,29 +23,35 @@ MainWindow::MainWindow(QWidget *parent)
     // 加载配置
     loadConfig();
     
+    // 绑定新控件指针
+    historyChineseText = ui->historyChineseText;
+    
     // 连接信号和槽
     connect(audioProcessor, &AudioProcessor::audioDataReceived,
             this, &MainWindow::onAudioDataReceived);
-    
     connect(azureSpeechAPI, &AzureSpeechAPI::recognitionResult,
             this, &MainWindow::onRecognitionResult);
     connect(azureSpeechAPI, &AzureSpeechAPI::translationResult,
             this, &MainWindow::onTranslationResult);
+    connect(azureSpeechAPI, &AzureSpeechAPI::finalTranslationResult,
+            this, &MainWindow::onFinalTranslationResult);
     connect(azureSpeechAPI, &AzureSpeechAPI::error,
             this, &MainWindow::onError);
     connect(azureSpeechAPI, &AzureSpeechAPI::statusChanged,
             this, &MainWindow::onStatusChanged);
-
-    // 连接按钮信号
     connect(ui->startButton, &QPushButton::clicked,
             this, &MainWindow::onStartButtonClicked);
     connect(ui->stopButton, &QPushButton::clicked,
             this, &MainWindow::onStopButtonClicked);
     connect(ui->testButton, &QPushButton::clicked, this, &MainWindow::onTestButtonClicked);
     connect(ui->saveConfigButton, &QPushButton::clicked, this, &MainWindow::onSaveConfigClicked);
-
-    // 初始化UI状态
+    connect(ui->clearButton, &QPushButton::clicked, this, &MainWindow::onClearButtonClicked);
     ui->stopButton->setEnabled(false);
+    recognitionHistory = "";
+    translationHistory = "";
+    // 设置实时区和历史区的伸缩比例
+    ui->verticalLayout->setStretch(0, 1); // splitter（实时区）
+    ui->verticalLayout->setStretch(1, 3); // groupBoxHistory（历史区）
 }
 
 MainWindow::~MainWindow()
@@ -102,12 +110,12 @@ void MainWindow::onAudioDataReceived(const QByteArray &data)
 
 void MainWindow::onRecognitionResult(const QString &text)
 {
-    ui->recognitionText->append(text);
+    ui->recognitionText->setPlainText(text);
 }
 
 void MainWindow::onTranslationResult(const QString &text)
 {
-    ui->translationText->append(text);
+    ui->translationText->setPlainText(text);
 }
 
 void MainWindow::onError(const QString &message)
@@ -165,4 +173,23 @@ void MainWindow::onTestButtonClicked()
     
     // 测试连接
     azureSpeechAPI->testConnection(key, region);
+}
+
+// 新增槽函数，供最终结果调用
+void MainWindow::onFinalRecognitionResult(const QString &text)
+{
+    recognitionHistory += text + "\n";
+    ui->recognitionText->setPlainText(recognitionHistory);
+}
+
+void MainWindow::onFinalTranslationResult(const QString &text)
+{
+    if (historyChineseText) historyChineseText->append(text);
+}
+
+void MainWindow::onClearButtonClicked()
+{
+    ui->recognitionText->clear();
+    ui->translationText->clear();
+    if (historyChineseText) historyChineseText->clear();
 } 

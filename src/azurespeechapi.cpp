@@ -98,19 +98,15 @@ void AzureSpeechAPI::startRecognitionAndTranslation(const QString &sourceLanguag
         recognizer->Recognized.Connect([this](const TranslationRecognitionEventArgs& e) {
             try {
                 if (e.Result->Reason == ResultReason::TranslatedSpeech) {
+                    // 最终英文
                     QString text = QString::fromStdString(e.Result->Text);
-                    LOG_INFO(QString("识别结果: %1").arg(text));
                     emit recognitionResult(text);
-                    
-                    // 获取翻译结果
+                    // 最终中文
                     auto translations = e.Result->Translations;
                     if (translations.find(currentTargetLanguage.toStdString()) != translations.end()) {
-                        QString translatedText = QString::fromStdString(
-                            translations[currentTargetLanguage.toStdString()]);
-                        LOG_INFO(QString("翻译结果: %1").arg(translatedText));
+                        QString translatedText = QString::fromStdString(translations[currentTargetLanguage.toStdString()]);
                         emit translationResult(translatedText);
-                    } else {
-                        LOG_ERROR(QString("未找到目标语言 %1 的翻译结果").arg(currentTargetLanguage));
+                        emit finalTranslationResult(translatedText);
                     }
                 } else if (e.Result->Reason == ResultReason::NoMatch) {
                     LOG_INFO("未检测到语音");
@@ -120,6 +116,21 @@ void AzureSpeechAPI::startRecognitionAndTranslation(const QString &sourceLanguag
             } catch (const std::exception& ex) {
                 LOG_ERROR(QString("处理识别结果时发生异常: %1").arg(ex.what()));
                 emit error(QString("处理识别结果时发生异常: %1").arg(ex.what()));
+            }
+        });
+
+        // Recognizing 事件
+        recognizer->Recognizing.Connect([this](const TranslationRecognitionEventArgs& e) {
+            if (e.Result->Reason == ResultReason::TranslatingSpeech) {
+                // 实时英文
+                QString partialText = QString::fromStdString(e.Result->Text);
+                emit recognitionResult(partialText);
+                // 实时中文
+                auto translations = e.Result->Translations;
+                if (translations.find(currentTargetLanguage.toStdString()) != translations.end()) {
+                    QString translatedText = QString::fromStdString(translations[currentTargetLanguage.toStdString()]);
+                    emit translationResult(translatedText);
+                }
             }
         });
 
@@ -173,8 +184,7 @@ void AzureSpeechAPI::stopRecognitionAndTranslation()
 void AzureSpeechAPI::processAudioData(const QByteArray &audioData)
 {
     if (!audioStream) {
-        LOG_ERROR("音频流未初始化");
-        emit error("音频流未初始化");
+        // 停止后收到的音频数据，直接忽略，不报错
         return;
     }
 
@@ -268,11 +278,20 @@ void AzureSpeechAPI::testConnection(const QString &key, const QString &region)
 
         // 进行识别
         auto result = recognizer->RecognizeOnceAsync().get();
-        if (result->Reason == ResultReason::RecognizedSpeech) {
+        if (result->Reason == ResultReason::RecognizedSpeech || result->Reason == ResultReason::NoMatch) {
             LOG_INFO("Connection test successful");
             emit statusChanged("连接测试成功");
         } else {
-            QString errorMsg = QString("Connection test failed: %1").arg(static_cast<int>(result->Reason));
+            QString reasonStr;
+            switch (result->Reason) {
+                case ResultReason::RecognizedSpeech: reasonStr = "RecognizedSpeech"; break;
+                case ResultReason::NoMatch: reasonStr = "NoMatch"; break;
+                case ResultReason::Canceled: reasonStr = "Canceled"; break;
+                default: reasonStr = QString::number(static_cast<int>(result->Reason)); break;
+            }
+            QString errorMsg = QString("Connection test failed: %1, Text: %2")
+                .arg(reasonStr)
+                .arg(QString::fromStdString(result->Text));
             LOG_ERROR(errorMsg);
             emit error(errorMsg);
         }
