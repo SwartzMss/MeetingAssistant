@@ -4,7 +4,6 @@
 #include <QDateTime>
 #include <windows.h>
 #include <dbghelp.h>
-#include <QDebug>
 #include "mainwindow.h"
 #include "logger.h"
 
