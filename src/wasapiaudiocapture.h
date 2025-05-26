@@ -7,6 +7,8 @@
 #include <mmdeviceapi.h>
 #include <audioclient.h>
 #include <functiondiscoverykeys_devpkey.h>
+#include "logger.h"
+#include <memory>
 
 class WasapiAudioCapture : public QObject
 {
@@ -35,8 +37,9 @@ private:
     IAudioCaptureClient* m_captureClient;
     HANDLE m_captureThread;
     bool m_isCapturing;
-    WAVEFORMATEX* m_waveFormat;
+    WAVEFORMATEXTENSIBLE* m_waveFormat;
     UINT32 m_bufferFrameCount;
+    std::unique_ptr<Logger> logger;
     static const int SAMPLE_RATE = 16000;
     static const int CHANNELS = 1;
     static const int BITS_PER_SAMPLE = 16;

@@ -1,5 +1,4 @@
 #include "azurespeechapi.h"
-#include <QDebug>
 
 using namespace Microsoft::CognitiveServices::Speech;
 using namespace Microsoft::CognitiveServices::Speech::Translation;
